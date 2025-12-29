@@ -5,6 +5,7 @@ from app.models import Shop, Product, SubscriptionRequest, RedemptionRequest
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, TextAreaField, SubmitField
 from wtforms.validators import DataRequired
+from app.utils import verify_password_required
 import datetime
 
 bp = Blueprint('shop', __name__, url_prefix='/shop')
@@ -56,7 +57,9 @@ def add_product():
         return redirect(url_for('shop.dashboard'))
     return render_template('shop/edit_product.html', form=form, title="Add Product")
 
-@bp.route('/confirm_payment/<int:request_id>')
+@bp.route('/confirm_payment/<int:request_id>', methods=['POST'])
+@login_required
+@verify_password_required
 def confirm_payment(request_id):
     req = SubscriptionRequest.query.get_or_404(request_id)
     if req.shop.owner_id != current_user.id:
@@ -76,11 +79,17 @@ def confirm_payment(request_id):
     package.balance += req.calculated_units
     package.last_updated = datetime.datetime.utcnow()
 
+    # Decrement Stock
+    if req.product.track_stock:
+        req.product.stock_quantity -= req.calculated_units
+
     db.session.commit()
     flash(f"Payment confirmed. Added {req.calculated_units} units to user.")
     return redirect(url_for('shop.dashboard'))
 
-@bp.route('/reject_payment/<int:request_id>')
+@bp.route('/reject_payment/<int:request_id>', methods=['POST'])
+@login_required
+@verify_password_required
 def reject_payment(request_id):
     req = SubscriptionRequest.query.get_or_404(request_id)
     if req.shop.owner_id != current_user.id:
@@ -93,7 +102,9 @@ def reject_payment(request_id):
     flash("Payment rejected.")
     return redirect(url_for('shop.dashboard'))
 
-@bp.route('/approve_redemption/<int:req_id>')
+@bp.route('/approve_redemption/<int:req_id>', methods=['POST'])
+@login_required
+@verify_password_required
 def approve_redemption(req_id):
     req = RedemptionRequest.query.get_or_404(req_id)
     if req.shop.owner_id != current_user.id:
@@ -115,7 +126,9 @@ def approve_redemption(req_id):
 
     return redirect(url_for('shop.dashboard'))
 
-@bp.route('/reject_redemption/<int:req_id>')
+@bp.route('/reject_redemption/<int:req_id>', methods=['POST'])
+@login_required
+@verify_password_required
 def reject_redemption(req_id):
     req = RedemptionRequest.query.get_or_404(req_id)
     if req.shop.owner_id != current_user.id:

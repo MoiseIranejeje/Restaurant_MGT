@@ -15,6 +15,9 @@
         <div id="redemption-area" class="border-2 border-dashed border-gray-300 rounded-lg p-10 bg-gray-50 transition hover:border-indigo-400">
             <div id="initial-state">
                 <p class="text-gray-600 mb-6">Click below to request redemption. Show this screen to the shop owner.</p>
+                <div class="mb-4">
+                    <input type="password" id="redemption-password" class="w-full sm:w-64 px-4 py-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500" placeholder="Enter Password to Redeem">
+                </div>
                 <button id="request-btn" onclick="requestRedemption()" class="w-full sm:w-auto px-8 py-4 bg-indigo-600 border border-transparent rounded-full font-semibold text-white text-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition transform hover:scale-105">
                     Redeem 1 Unit
                 </button>
@@ -66,6 +69,12 @@
     let pollInterval = null;
 
     function requestRedemption() {
+        const password = document.getElementById('redemption-password').value;
+        if (!password) {
+            alert("Please enter your password.");
+            return;
+        }
+
         document.getElementById('initial-state').classList.add('hidden');
         document.getElementById('status-area').classList.remove('hidden');
 
@@ -74,7 +83,8 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({ password: password })
         })
         .then(response => response.json())
         .then(data => {

@@ -3,8 +3,9 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import Shop, Product, SubscriptionRequest, UserPackage, RedemptionRequest
 from flask_wtf import FlaskForm
-from wtforms import StringField, FloatField, SubmitField
+from wtforms import StringField, FloatField, PasswordField, SubmitField
 from wtforms.validators import DataRequired
+from app.utils import verify_password_required
 import math
 import datetime
 
@@ -12,6 +13,7 @@ bp = Blueprint('buyer', __name__)
 
 class SubscriptionForm(FlaskForm):
     amount = FloatField('Amount to Pay', validators=[DataRequired()])
+    password_verify = PasswordField('Confirm Password', validators=[DataRequired()])
     submit = SubmitField('Request Subscription')
 
 @bp.route('/')
@@ -53,8 +55,20 @@ def shop_profile(shop_id):
 
 @bp.route('/product/<int:product_id>/subscribe', methods=['GET', 'POST'])
 @login_required
+@verify_password_required
 def subscribe(product_id):
     product = Product.query.get_or_404(product_id)
+
+    # Check if shop is expired
+    if product.shop.subscription_expires_at and product.shop.subscription_expires_at < datetime.datetime.utcnow():
+        flash("This shop's subscription has expired. You cannot purchase products.", "error")
+        return redirect(url_for('buyer.shop_profile', shop_id=product.shop_id))
+
+    # Check Stock
+    if product.track_stock and product.stock_quantity <= 0:
+         flash("Product is Out of Stock.", "error")
+         return redirect(url_for('buyer.shop_profile', shop_id=product.shop_id))
+
     form = SubscriptionForm()
 
     if form.validate_on_submit():
@@ -64,6 +78,11 @@ def subscribe(product_id):
             return render_template('buyer/subscribe.html', form=form, product=product)
 
         units = math.floor(amount / product.price_per_unit)
+
+        # Check stock again for quantity
+        if product.track_stock and product.stock_quantity < units:
+             flash(f"Only {product.stock_quantity} units available.", "error")
+             return render_template('buyer/subscribe.html', form=form, product=product)
 
         req = SubscriptionRequest(
             user_id=current_user.id,
@@ -95,6 +114,12 @@ def request_redemption(package_id):
     package = UserPackage.query.get_or_404(package_id)
     if package.user_id != current_user.id or package.balance < 1:
         return jsonify({'status': 'error', 'message': 'Invalid package'}), 400
+
+    # Password Check for Redemption API
+    data = request.get_json()
+    password = data.get('password')
+    if not password or not current_user.check_password(password):
+        return jsonify({'status': 'error', 'message': 'Invalid password'}), 401
 
     req = RedemptionRequest(
         user_id=current_user.id,

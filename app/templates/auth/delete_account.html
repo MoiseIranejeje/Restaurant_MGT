@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md border-t-4 border-red-500">
+    <h2 class="text-2xl font-bold mb-4 text-red-600">Delete Account</h2>
+    <p class="mb-6 text-gray-600">
+        Are you sure you want to delete your account? This action cannot be undone.
+        Please confirm your password to proceed.
+    </p>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="mb-6">
+            {{ form.password.label(class="block text-gray-700 text-sm font-bold mb-2") }}
+            {{ form.password(class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline") }}
+        </div>
+        <div class="flex items-center justify-between">
+            {{ form.submit(class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline cursor-pointer") }}
+            <a href="{{ url_for('buyer.index') }}" class="inline-block align-baseline font-bold text-sm text-indigo-600 hover:text-indigo-800">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

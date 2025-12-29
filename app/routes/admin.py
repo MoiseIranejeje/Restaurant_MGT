@@ -6,6 +6,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 import uuid
+import datetime
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -36,7 +37,9 @@ def create_shop():
             return redirect(url_for('admin.create_shop'))
 
         shop_code = str(uuid.uuid4())[:8].upper()
-        shop = Shop(name=form.name.data, owner=owner, shop_code=shop_code)
+        # Set 30-day subscription
+        expires_at = datetime.datetime.utcnow() + datetime.timedelta(days=30)
+        shop = Shop(name=form.name.data, owner=owner, shop_code=shop_code, subscription_expires_at=expires_at)
         db.session.add(shop)
         db.session.commit()
         flash(f'Shop created successfully! Code: {shop_code}')

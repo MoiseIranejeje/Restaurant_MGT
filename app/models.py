@@ -8,10 +8,12 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128))
-    role = db.Column(db.String(20), nullable=False)  # 'system_admin', 'shop_admin', 'buyer'
+    role = db.Column(db.String(20), nullable=False)  # 'system_admin', 'shop_admin', 'shop_staff', 'buyer'
+    shop_id = db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=True) # For staff
+    is_deleted = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    shops = db.relationship('Shop', backref='owner', lazy='dynamic')
+    shops = db.relationship('Shop', foreign_keys='Shop.owner_id', backref='owner', lazy='dynamic')
     subscription_requests = db.relationship('SubscriptionRequest', backref='buyer', lazy='dynamic')
     packages = db.relationship('UserPackage', backref='owner', lazy='dynamic')
 
@@ -33,6 +35,7 @@ class Shop(db.Model):
 
     products = db.relationship('Product', backref='shop', lazy='dynamic')
     subscription_requests = db.relationship('SubscriptionRequest', backref='shop', lazy='dynamic')
+    staff = db.relationship('User', foreign_keys='User.shop_id', backref='assigned_shop', lazy='dynamic')
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -42,6 +45,12 @@ class Product(db.Model):
     price_per_unit = db.Column(db.Float, nullable=False)
     unit_name = db.Column(db.String(50), default="Item") # e.g., Plate, Cup, Bowl
     is_active = db.Column(db.Boolean, default=True)
+
+    # Inventory & Discounts
+    stock_quantity = db.Column(db.Integer, default=0)
+    track_stock = db.Column(db.Boolean, default=False)
+    discount_percent = db.Column(db.Integer, default=0)
+    discount_end = db.Column(db.DateTime, nullable=True)
 
 class SubscriptionRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
