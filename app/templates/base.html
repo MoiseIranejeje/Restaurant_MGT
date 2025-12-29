@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ title|default("Subscription Commerce") }}</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            /* Custom minimalist scrollbar */
+            ::-webkit-scrollbar {
+                width: 6px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #f1f1f1;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #888;
+                border-radius: 3px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #555;
+            }
+            /* Parallax helper */
+            .parallax-layer {
+                will-change: transform;
+                transform: translateZ(0); /* Optimize rendering */
+            }
+            /* Subtle fade in */
+            .fade-in {
+                animation: fadeIn 0.5s ease-out;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        </style>
+    </head>
+    <body class="bg-gray-50 text-gray-800 font-sans antialiased flex flex-col min-h-screen">
+
+        <!-- Navigation -->
+        <nav class="bg-white shadow-sm sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <a href="{{ url_for('buyer.index') }}" class="text-xl font-bold text-indigo-600 tracking-tight">SubCom</a>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="{{ url_for('buyer.index') }}" class="text-sm font-medium text-gray-500 hover:text-gray-900">Home</a>
+                        {% if current_user.is_authenticated %}
+                            {% if current_user.role == 'system_admin' %}
+                                <a href="{{ url_for('admin.dashboard') }}" class="text-sm font-medium text-gray-500 hover:text-gray-900">Dashboard</a>
+                            {% elif current_user.role == 'shop_admin' %}
+                                <a href="{{ url_for('shop.dashboard') }}" class="text-sm font-medium text-gray-500 hover:text-gray-900">Shop</a>
+                            {% elif current_user.role == 'buyer' %}
+                                <a href="{{ url_for('buyer.dashboard') }}" class="text-sm font-medium text-gray-500 hover:text-gray-900">My Subs</a>
+                            {% endif %}
+                            <a href="{{ url_for('auth.logout') }}" class="text-sm font-medium text-red-500 hover:text-red-700">Logout</a>
+                        {% else %}
+                            <a href="{{ url_for('auth.login') }}" class="text-sm font-medium text-gray-500 hover:text-gray-900">Login</a>
+                            <a href="{{ url_for('auth.register') }}" class="px-4 py-2 rounded-full bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition">Get Started</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Flash Messages -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                <div class="bg-indigo-50 border-l-4 border-indigo-400 p-4 mb-4 rounded-r shadow-sm fade-in" role="alert">
+                    <p class="text-sm text-indigo-700">{{ message }}</p>
+                </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Main Content -->
+        <main class="flex-grow">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 mt-12">
+            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <p class="text-center text-sm text-gray-400">&copy; {{ 2024 }} Subscription Commerce. Professional & Fast.</p>
+            </div>
+        </footer>
+
+        <script>
+            // Lightweight Parallax Logic
+            document.addEventListener('scroll', function() {
+                const scrolled = window.scrollY;
+                const parallaxElements = document.querySelectorAll('.parallax-bg');
+
+                // Disable on mobile if needed (simple width check)
+                if (window.innerWidth > 768) {
+                    parallaxElements.forEach(el => {
+                        const speed = el.getAttribute('data-speed') || 0.5;
+                        el.style.transform = `translateY(${scrolled * speed}px)`;
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>

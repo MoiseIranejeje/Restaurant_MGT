@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 text-center">
+    <div class="bg-white shadow sm:rounded-lg p-8 border-t-4 border-indigo-600">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Redeem {{ package.product.name }}</h1>
+        <p class="text-gray-500 mb-6">{{ package.shop.name }}</p>
+
+        <div class="mb-8">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                Balance: {{ package.balance }} {{ package.product.unit_name }}s
+            </span>
+        </div>
+
+        <div id="redemption-area" class="border-2 border-dashed border-gray-300 rounded-lg p-10 bg-gray-50 transition hover:border-indigo-400">
+            <div id="initial-state">
+                <p class="text-gray-600 mb-6">Click below to request redemption. Show this screen to the shop owner.</p>
+                <button id="request-btn" onclick="requestRedemption()" class="w-full sm:w-auto px-8 py-4 bg-indigo-600 border border-transparent rounded-full font-semibold text-white text-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition transform hover:scale-105">
+                    Redeem 1 Unit
+                </button>
+            </div>
+
+            <div id="status-area" class="hidden">
+                <h3 class="text-xl font-medium text-gray-900 animate-pulse">Request Pending...</h3>
+                <p class="text-gray-500 mt-2">Please wait for shop confirmation.</p>
+                <div class="mt-6 flex justify-center">
+                    <svg class="animate-spin h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <p class="mt-4 text-xs text-gray-400">Request ID: <span id="req-id"></span></p>
+            </div>
+
+            <div id="success-area" class="hidden">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                    <svg class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">Approved!</h2>
+                <p class="text-gray-600 mt-2">Enjoy your meal.</p>
+                <div class="mt-6">
+                    <a href="{{ url_for('buyer.dashboard') }}" class="text-indigo-600 font-medium hover:text-indigo-500">Back to Dashboard</a>
+                </div>
+            </div>
+
+            <div id="rejected-area" class="hidden">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                    <svg class="h-10 w-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900">Rejected</h2>
+                <p class="text-gray-600 mt-2">Please speak to the shop staff.</p>
+                <div class="mt-6">
+                    <a href="{{ url_for('buyer.dashboard') }}" class="text-indigo-600 font-medium hover:text-indigo-500">Back to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let requestId = null;
+    let pollInterval = null;
+
+    function requestRedemption() {
+        document.getElementById('initial-state').classList.add('hidden');
+        document.getElementById('status-area').classList.remove('hidden');
+
+        // Correct usage of url_for via template injection
+        fetch("{{ url_for('buyer.request_redemption', package_id=package.id) }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                requestId = data.request_id;
+                document.getElementById('req-id').innerText = requestId;
+                startPolling();
+            } else {
+                alert("Error: " + data.message);
+                document.getElementById('status-area').classList.add('hidden');
+                document.getElementById('initial-state').classList.remove('hidden');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Network error");
+            document.getElementById('status-area').classList.add('hidden');
+            document.getElementById('initial-state').classList.remove('hidden');
+        });
+    }
+
+    function startPolling() {
+        pollInterval = setInterval(() => {
+            // We use the ID to check status. The logic fix is using the correct relative path logic if needed,
+            // but since we are in JS, we can just construct the URL manually or use a base variable.
+            // Using /api/check_redemption_status/ID directly.
+            fetch("/api/check_redemption_status/" + requestId)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'approved') {
+                    clearInterval(pollInterval);
+                    document.getElementById('status-area').classList.add('hidden');
+                    document.getElementById('success-area').classList.remove('hidden');
+                } else if (data.status === 'rejected') {
+                    clearInterval(pollInterval);
+                    document.getElementById('status-area').classList.add('hidden');
+                    document.getElementById('rejected-area').classList.remove('hidden');
+                }
+            });
+        }, 2000);
+    }
+</script>
+{% endblock %}
